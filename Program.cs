@@ -25,7 +25,13 @@ namespace Last_One_Loses
 
         public override int GetMatchSticks(int remainingMatchSticks)
         {
-            return Helpers.IntPrompt(() => Helpers.Print(string.Format("{0}'s turn (1, 2, or 3): ", base.Name)));
+            int playerMatchSticks;
+            do
+            {
+                playerMatchSticks = Helpers.IntPrompt(() => Helpers.Print(string.Format("{0}'s turn (1, 2, or 3): ", base.Name)));
+            } while (playerMatchSticks <= 0 || playerMatchSticks > 3 || playerMatchSticks > remainingMatchSticks);
+
+            return playerMatchSticks;
         }
     }
 
@@ -89,8 +95,6 @@ namespace Last_One_Loses
                 this.turn = DecideTurn();
             else
                 this.turn = turn;
-
-            Play();
         }
 
         private int DecideTurn()
@@ -124,34 +128,29 @@ namespace Last_One_Loses
                 for (int column = 0; column < nOfMatchSticks; column++)
                 {
                     if (rows == 0) Helpers.Print("0 ", ConsoleColor.Red);
-                    // Helpers.Print(string.Format("{0}, {1}", rows, column));
                     else Helpers.Print("| ", ConsoleColor.Yellow);
                 }
                 Helpers.Print("\n");
             }
         }
 
-        private void Play()
+        public Player Play()
         {
             while (true)
             {
                 Helpers.Print(string.Format("There are {0} matches remaining\n", this.matchSticks), ConsoleColor.Green);
                 PrintMatchsticks(this.matchSticks);
 
-                int playerMatchSticks;
                 Player player = this.players[this.turn % this.players.Length];
-                do
-                {
-                    playerMatchSticks = player.GetMatchSticks(this.matchSticks);
-                } while (playerMatchSticks <= 0 || playerMatchSticks > 3 || playerMatchSticks > this.matchSticks);
 
+                int playerMatchSticks = player.GetMatchSticks(this.matchSticks);
                 Helpers.Print(string.Format("{0} played {1}\n", player.Name, playerMatchSticks));
                 this.matchSticks -= playerMatchSticks;
 
                 if (this.matchSticks == 0)
                 {
-                    Helpers.Print(string.Format("{0} Lost!", player.Name), ConsoleColor.Red);
-                    break;
+                    Helpers.Print(string.Format("{0} Lost!\n", player.Name), ConsoleColor.Red);
+                    return player;
                 }
                 this.turn++;
             }
@@ -161,36 +160,57 @@ namespace Last_One_Loses
     internal class Program
     {
         static int startingMatchSticks = 12;
+        static int playBestOutOf = 1;
 
         static void LoadGame()
         {
 
         }
+
+        static void Play(Player[] players)
+        {
+            Dictionary<Player, int> playerLosses = new Dictionary<Player, int>();
+            foreach (Player player in players)
+            {
+                playerLosses[player] = 0;
+            }
+
+            for (int i = 0; i < playBestOutOf; i++)
+            {
+                Game game = new Game(-1,
+                    startingMatchSticks, players
+                );
+                playerLosses[game.Play()]++;
+            }
+
+
+            if (playBestOutOf > 1)
+            {
+                Dictionary<Player, int> Leaderboard = playerLosses.OrderBy(p => p.Value).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+                Helpers.Print($"{Leaderboard.First().Key.Name} won!\n", ConsoleColor.Magenta);
+                Helpers.Print("Details: \n", ConsoleColor.Gray);
+                foreach (var p in Leaderboard)
+                {
+                    Helpers.Print($"{p.Key.Name} lost {p.Value} times\n", ConsoleColor.Gray);
+                }
+            }
+        }
         static void SinglePlayerGame()
         {
-            Game game = new Game(-1,
-                startingMatchSticks,
-                new Player[] { new AIPlayer("Computer"), new HumanPlayer(Helpers.StringPrompt(() => Helpers.Print("Player 1 Name: "))) }
-            );
+            Play(new Player[] { new AIPlayer("Computer"), new HumanPlayer(Helpers.StringPrompt(() => Helpers.Print("Player 1 Name: "))) });
         }
         static void TwoPlayerGame()
         {
-            Game game = new Game(-1,
-                            startingMatchSticks,
-                            new Player[] { new HumanPlayer(Helpers.StringPrompt(() => Helpers.Print("Player 1 Name: "))), new HumanPlayer(Helpers.StringPrompt(() => Helpers.Print("Player 2 Name: "))) }
-                        );
+            Play(new Player[] { new HumanPlayer(Helpers.StringPrompt(() => Helpers.Print("Player 1 Name: "))), new HumanPlayer(Helpers.StringPrompt(() => Helpers.Print("Player 2 Name: "))) });
         }
         static void ThreePlayerGame()
         {
-            Game game = new Game(-1,
-                            startingMatchSticks,
-                            new Player[] { new HumanPlayer(Helpers.StringPrompt(() => Helpers.Print("Player 1 Name: "))), new HumanPlayer(Helpers.StringPrompt(() => Helpers.Print("Player 2 Name: "))), new HumanPlayer(Helpers.StringPrompt(() => Helpers.Print("Player 3 Name: "))) }
-                        );
-
+            Play(new Player[] { new HumanPlayer(Helpers.StringPrompt(() => Helpers.Print("Player 1 Name: "))), new HumanPlayer(Helpers.StringPrompt(() => Helpers.Print("Player 2 Name: "))), new HumanPlayer(Helpers.StringPrompt(() => Helpers.Print("Player 3 Name: "))) });
         }
         static void OptionsPage()
         {
             startingMatchSticks = Helpers.IntPrompt(() => Helpers.Print("Enter the starting matchsticks: "));
+            playBestOutOf = Helpers.IntPrompt(() => Helpers.Print("Play best out of: "));
             ShowMenu();
         }
 
