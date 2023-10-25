@@ -35,9 +35,9 @@ namespace Last_One_Loses
         }
     }
 
-    public class AIPlayer : Player
+    public class HardAIPlayer : Player
     {
-        public AIPlayer(string name) : base(name) { }
+        public HardAIPlayer(string name) : base(name) { }
 
         public override int GetMatchSticks(int remainingMatchSticks)
         {
@@ -48,6 +48,27 @@ namespace Last_One_Loses
                 3 => 2,
                 _ => 1,
             };
+        }
+    }
+
+    public class EasyAIPlayer : Player
+    {
+        public EasyAIPlayer(string name) : base(name) { }
+
+        public override int GetMatchSticks(int remainingMatchSticks)
+        {
+            return 1;
+        }
+    }
+
+    public class ChaoticAIPlayer : Player
+    {
+        public ChaoticAIPlayer(string name) : base(name) { }
+
+        public override int GetMatchSticks(int remainingMatchSticks)
+        {
+            Random random = new();
+            return random.Next(1, int.Min(4, remainingMatchSticks + 1));
         }
     }
 
@@ -161,6 +182,7 @@ namespace Last_One_Loses
     {
         static int startingMatchSticks = 12;
         static int playBestOutOf = 1;
+        static int aiDifficulty = 2;
 
         static void LoadGame()
         {
@@ -195,9 +217,19 @@ namespace Last_One_Loses
                 }
             }
         }
+
+        static Player ChooseAI() {
+            return aiDifficulty switch
+            {
+                0 => new ChaoticAIPlayer("Chaotic AI"), 
+                1 => new EasyAIPlayer("Easy AI"),
+                _ => new HardAIPlayer("Hard AI"),
+            };
+        }
+        
         static void SinglePlayerGame()
         {
-            Play(new Player[] { new AIPlayer("Computer"), new HumanPlayer(Helpers.StringPrompt(() => Helpers.Print("Player 1 Name: "))) });
+            Play(new Player[] { ChooseAI(), new HumanPlayer(Helpers.StringPrompt(() => Helpers.Print("Player 1 Name: "))) });
         }
         static void TwoPlayerGame()
         {
@@ -211,6 +243,7 @@ namespace Last_One_Loses
         {
             startingMatchSticks = Helpers.IntPrompt(() => Helpers.Print("Enter the starting matchsticks: "));
             playBestOutOf = Helpers.IntPrompt(() => Helpers.Print("Play best out of: "));
+            aiDifficulty = Helpers.IntPrompt(() => Helpers.Print("AI Difficulty: (0: chaotic, 1: easy, 2: hard)"));
             ShowMenu();
         }
 
