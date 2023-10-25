@@ -83,18 +83,61 @@ namespace Last_One_Loses
 
         public Game(int turn, int matchSticks, Player[] players)
         {
-            this.turn = turn;
-            this.matchSticks = matchSticks;
             this.players = players;
+            this.matchSticks = matchSticks;
+            if (turn == -1)
+                this.turn = DecideTurn();
+            else
+                this.turn = turn;
 
             Play();
+        }
+
+        private int DecideTurn()
+        {
+            Random random = new Random();
+
+            if (players.Length == 3)
+            {
+                return random.Next(0, 3);
+            }
+
+            string coinChoice;
+            do
+            {
+                coinChoice = Helpers.StringPrompt(() => Helpers.Print(string.Format("{0}, choose 'heads' or 'tails'? ", players[1].Name)));
+            } while (coinChoice != "heads" && coinChoice != "tails");
+
+            int coinOutcome = random.Next(0, 2);
+            Helpers.Print(string.Format("The coin flipped {0}\n", coinOutcome == 0 ? "heads" : "tails"), ConsoleColor.Blue);
+
+            if ((coinOutcome == 0 && coinChoice == "heads") || (coinOutcome == 1 && coinChoice == "tails")) // guessed correctly
+                return 1;
+
+            return 0;
+        }
+
+        private void PrintMatchsticks(int nOfMatchSticks)
+        {
+            for (int rows = 0; rows < 4; rows++)
+            {
+                for (int column = 0; column < nOfMatchSticks; column++)
+                {
+                    if (rows == 0) Helpers.Print("0 ", ConsoleColor.Red);
+                    // Helpers.Print(string.Format("{0}, {1}", rows, column));
+                    else Helpers.Print("| ", ConsoleColor.Yellow);
+                }
+                Helpers.Print("\n");
+            }
         }
 
         private void Play()
         {
             while (true)
             {
-                this.turn++;
+                Helpers.Print(string.Format("There are {0} matches remaining\n", this.matchSticks), ConsoleColor.Green);
+                PrintMatchsticks(this.matchSticks);
+
                 int playerMatchSticks;
                 Player player = this.players[this.turn % this.players.Length];
                 do
@@ -105,13 +148,12 @@ namespace Last_One_Loses
                 Helpers.Print(string.Format("{0} played {1}\n", player.Name, playerMatchSticks));
                 this.matchSticks -= playerMatchSticks;
 
-                Helpers.Print(string.Format("There are {0} matches remaining\n", this.matchSticks), ConsoleColor.Green);
-
                 if (this.matchSticks == 0)
                 {
                     Helpers.Print(string.Format("{0} Lost!", player.Name), ConsoleColor.Red);
                     break;
                 }
+                this.turn++;
             }
         }
     }
@@ -126,21 +168,21 @@ namespace Last_One_Loses
         }
         static void SinglePlayerGame()
         {
-            Game game = new Game(0,
+            Game game = new Game(-1,
                 startingMatchSticks,
                 new Player[] { new AIPlayer("Computer"), new HumanPlayer(Helpers.StringPrompt(() => Helpers.Print("Player 1 Name: "))) }
             );
         }
         static void TwoPlayerGame()
         {
-            Game game = new Game(0,
+            Game game = new Game(-1,
                             startingMatchSticks,
                             new Player[] { new HumanPlayer(Helpers.StringPrompt(() => Helpers.Print("Player 1 Name: "))), new HumanPlayer(Helpers.StringPrompt(() => Helpers.Print("Player 2 Name: "))) }
                         );
         }
         static void ThreePlayerGame()
         {
-            Game game = new Game(0,
+            Game game = new Game(-1,
                             startingMatchSticks,
                             new Player[] { new HumanPlayer(Helpers.StringPrompt(() => Helpers.Print("Player 1 Name: "))), new HumanPlayer(Helpers.StringPrompt(() => Helpers.Print("Player 2 Name: "))), new HumanPlayer(Helpers.StringPrompt(() => Helpers.Print("Player 3 Name: "))) }
                         );
