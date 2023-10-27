@@ -35,7 +35,13 @@ namespace Last_One_Loses
         }
     }
 
-    public class HardAIPlayer : Player
+    public class AIPlayer : Player
+    {
+        public AIPlayer(string name) : base(name)
+        { }
+    }
+
+    public class HardAIPlayer : AIPlayer
     {
         public HardAIPlayer(string name) : base(name) { }
 
@@ -51,7 +57,7 @@ namespace Last_One_Loses
         }
     }
 
-    public class EasyAIPlayer : Player
+    public class EasyAIPlayer : AIPlayer
     {
         public EasyAIPlayer(string name) : base(name) { }
 
@@ -61,7 +67,7 @@ namespace Last_One_Loses
         }
     }
 
-    public class ChaoticAIPlayer : Player
+    public class ChaoticAIPlayer : AIPlayer
     {
         public ChaoticAIPlayer(string name) : base(name) { }
 
@@ -108,7 +114,7 @@ namespace Last_One_Loses
         int matchSticks;
         private Player[] players;
 
-        public Game(int turn, int matchSticks, Player[] players)
+        public Game(int turn, int matchSticks, Player[] players, bool writeToFile = true)
         {
             this.players = players;
             this.matchSticks = matchSticks;
@@ -116,6 +122,29 @@ namespace Last_One_Loses
                 this.turn = DecideTurn();
             else
                 this.turn = turn;
+
+            if (writeToFile)
+            {
+                try
+                {
+                    string filePath = "runninggame.dat";
+                    using FileStream fileStream = new FileStream(filePath, FileMode.Append, FileAccess.Write);
+                    using BinaryWriter writer = new BinaryWriter(fileStream);
+
+                    Helpers.Print($"turn {this.turn}\n", ConsoleColor.Magenta);
+
+                    writer.Write(this.turn);
+
+                    fileStream.Close();
+                    writer.Close();
+
+                    Console.WriteLine("Data written to binary file. 1");
+                }
+                catch (IOException ex)
+                {
+                    Console.WriteLine("An error occurred 4: " + ex.Message);
+                }
+            }
         }
 
         private int DecideTurn()
@@ -155,25 +184,49 @@ namespace Last_One_Loses
             }
         }
 
+        public void PlayTurn(int playerMatchSticks)
+        {
+            this.matchSticks -= playerMatchSticks;
+            this.turn++;
+        }
+
         public Player Play()
         {
             while (true)
             {
-                Helpers.Print(string.Format("There are {0} matches remaining\n", this.matchSticks), ConsoleColor.Green);
-                PrintMatchsticks(this.matchSticks);
-
                 Player player = this.players[this.turn % this.players.Length];
-
-                int playerMatchSticks = player.GetMatchSticks(this.matchSticks);
-                Helpers.Print(string.Format("{0} played {1}\n", player.Name, playerMatchSticks));
-                this.matchSticks -= playerMatchSticks;
 
                 if (this.matchSticks == 0)
                 {
-                    Helpers.Print(string.Format("{0} Lost!\n", player.Name), ConsoleColor.Red);
-                    return player;
+                    Helpers.Print(string.Format("{0} Lost!\n", players[(this.turn - 1) % this.players.Length].Name), ConsoleColor.Red);
+                    return players[(this.turn - 1) % this.players.Length];
                 }
-                this.turn++;
+
+                Helpers.Print(string.Format("There are {0} matches remaining\n", this.matchSticks), ConsoleColor.Green);
+                PrintMatchsticks(this.matchSticks);
+
+                int playerMatchSticks = player.GetMatchSticks(this.matchSticks);
+
+                Helpers.Print(string.Format("{0} played {1}\n", player.Name, playerMatchSticks));
+                try
+                {
+                    string filePath = "runninggame.dat";
+                    using FileStream fileStream = new FileStream(filePath, FileMode.Append, FileAccess.Write);
+                    using BinaryWriter writer = new BinaryWriter(fileStream);
+
+                    writer.Write(playerMatchSticks);
+                    Console.WriteLine(playerMatchSticks);
+
+                    fileStream.Close();
+                    writer.Close();
+
+                    Console.WriteLine("Data written to binary file. 2");
+                }
+                catch (IOException ex)
+                {
+                    Console.WriteLine("An error occurred 1: " + ex.Message);
+                }
+                PlayTurn(playerMatchSticks);
             }
         }
     }
@@ -186,11 +239,139 @@ namespace Last_One_Loses
 
         static void LoadGame()
         {
+            string filePath = "runninggame.dat";
 
+            try
+            {
+                using FileStream fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
+                using BinaryReader reader = new BinaryReader(fileStream);
+
+                int nOfPlayers = reader.ReadInt32();
+                playBestOutOf = reader.ReadInt32();
+                startingMatchSticks = reader.ReadInt32();
+                aiDifficulty = reader.ReadInt32();
+
+                Helpers.Print($"nOfPlayers {nOfPlayers}\n", ConsoleColor.Magenta);
+                Helpers.Print($"playBestOutOf {playBestOutOf}\n", ConsoleColor.Magenta);
+                Helpers.Print($"startingMatchSticks {startingMatchSticks}\n", ConsoleColor.Magenta);
+                Helpers.Print($"aiDifficulty {aiDifficulty}\n", ConsoleColor.Magenta);
+
+
+                Game game;
+                Player[] players = new Player[nOfPlayers];
+
+                for (int i = 0; i < nOfPlayers; i++)
+                {
+                    players[i] = new HumanPlayer(reader.ReadString());
+
+                    if (aiDifficulty != -1 && i == 0)
+                        players[i] = ChooseAI(aiDifficulty);
+
+                    Helpers.Print($"Name {i} {players[i].Name}\n", ConsoleColor.Magenta);
+                }
+
+
+                Dictionary<Player, int> playerLosses = new Dictionary<Player, int>();
+                foreach (Player player in players)
+                {
+                    playerLosses[player] = 0;
+                }
+
+
+                int playedMatchsticksSum = 0, turn = -1, nOfSavedGames = 0;
+
+                while (reader.PeekChar() != -1)
+                {
+                    int data = reader.ReadInt32();
+                    if (turn == -1)
+                    {
+                        turn = data;
+                        continue;
+                    }
+
+                    if (playedMatchsticksSum + data == startingMatchSticks)
+                    {
+                        playerLosses[players[turn % players.Length]]++;
+                        playedMatchsticksSum = 0;
+                        turn = -1;
+                        nOfSavedGames++;
+                    }
+                    else
+                    {
+                        playedMatchsticksSum += data;
+                        turn++;
+                    }
+                }
+                reader.Close();
+
+                foreach (var p in playerLosses)
+                {
+                    Helpers.Print($"{p.Key.Name} lost {p.Value} times\n", ConsoleColor.Gray);
+                }
+
+                game = new Game(turn, startingMatchSticks - playedMatchsticksSum, players, false);
+                playerLosses[game.Play()]++;
+
+                for (int i = 0; i < playBestOutOf - nOfSavedGames - 1; i++)
+                {
+                    game = new Game(-1,
+                        startingMatchSticks, players, true
+                    );
+                    playerLosses[game.Play()]++;
+                }
+
+                if (playBestOutOf > 1)
+                {
+                    Dictionary<Player, int> Leaderboard = playerLosses.OrderBy(p => p.Value).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+                    Helpers.Print($"{Leaderboard.First().Key.Name} won!\n", ConsoleColor.Magenta);
+                    Helpers.Print("Details: \n", ConsoleColor.Gray);
+                    foreach (var p in Leaderboard)
+                    {
+                        Helpers.Print($"{p.Key.Name} lost {p.Value} times\n", ConsoleColor.Gray);
+                    }
+                }
+            }
+            catch (FileNotFoundException)
+            {
+                Console.WriteLine("File not found.");
+            }
+            catch (IOException ex)
+            {
+                Console.WriteLine("An error occurred 2: " + ex.Message);
+            }
         }
 
         static void Play(Player[] players)
         {
+            string filePath = "runninggame.dat";
+
+            try
+            {
+                using FileStream fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write);
+                using BinaryWriter writer = new BinaryWriter(fileStream);
+
+                writer.Write(players.Length);
+                writer.Write(playBestOutOf);
+                writer.Write(startingMatchSticks);
+                Console.WriteLine((players[0] is AIPlayer) ? aiDifficulty : -1);
+                writer.Write(players[0] is AIPlayer ? aiDifficulty : -1);
+
+                foreach (Player player in players)
+                {
+                    writer.Write(player.Name);
+                }
+
+                fileStream.Close();
+                writer.Close();
+
+                Console.WriteLine("Data written to binary file. 3");
+            }
+            catch (IOException ex)
+            {
+                Console.WriteLine("An error occurred 3: " + ex.Message);
+            }
+
+
             Dictionary<Player, int> playerLosses = new Dictionary<Player, int>();
             foreach (Player player in players)
             {
@@ -218,18 +399,19 @@ namespace Last_One_Loses
             }
         }
 
-        static Player ChooseAI() {
+        static Player ChooseAI(int aiDifficulty)
+        {
             return aiDifficulty switch
             {
-                0 => new ChaoticAIPlayer("Chaotic AI"), 
+                0 => new ChaoticAIPlayer("Chaotic AI"),
                 1 => new EasyAIPlayer("Easy AI"),
                 _ => new HardAIPlayer("Hard AI"),
             };
         }
-        
+
         static void SinglePlayerGame()
         {
-            Play(new Player[] { ChooseAI(), new HumanPlayer(Helpers.StringPrompt(() => Helpers.Print("Player 1 Name: "))) });
+            Play(new Player[] { ChooseAI(aiDifficulty), new HumanPlayer(Helpers.StringPrompt(() => Helpers.Print("Player 1 Name: "))) });
         }
         static void TwoPlayerGame()
         {
