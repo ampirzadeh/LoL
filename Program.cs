@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks.Dataflow;
-
-/** BINARY FILE SAVING GAME DATA
+﻿/** BINARY FILE SAVING GAME DATA
 
 number of players (including ai if it exists)
 playBestOutOf
@@ -151,7 +146,7 @@ namespace Last_One_Loses
         }
         static public string StringPrompt(Action PromptMessage)
         {
-            string? result = "";
+            string? result;
             do
             {
                 PromptMessage();
