@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks.Dataflow;
 
 /** BINARY FILE SAVING GAME DATA
 
@@ -93,6 +94,38 @@ namespace Last_One_Loses
         }
     }
 
+    public class FileHandler
+    {
+        const string fileName = "runninggame.dat";
+
+        static public void WriteToFile(int[] intVals, string[] stringVals)
+        {
+            try
+            {
+                using FileStream fileStream = new(fileName, FileMode.Append, FileAccess.Write);
+                using BinaryWriter writer = new(fileStream);
+
+                foreach (int v in intVals)
+                    writer.Write(v);
+
+                foreach (string v in stringVals)
+                    writer.Write(v);
+
+                fileStream.Close();
+                writer.Close();
+            }
+            catch (IOException ex)
+            {
+                Helpers.Print($"An error occurred: {ex.Message} \n", ConsoleColor.Red);
+            }
+        }
+
+        static public bool FileExists()
+        {
+            return File.Exists(fileName);
+        }
+    }
+
     class Helpers
     {
         static public void Print(string text, ConsoleColor color = ConsoleColor.White)
@@ -139,23 +172,7 @@ namespace Last_One_Loses
                 this.turn = turn;
 
             if (writeToFile)
-            {
-                try
-                {
-                    string filePath = "runninggame.dat";
-                    using FileStream fileStream = new(filePath, FileMode.Append, FileAccess.Write);
-                    using BinaryWriter writer = new(fileStream);
-
-                    writer.Write(this.turn);
-
-                    fileStream.Close();
-                    writer.Close();
-                }
-                catch (IOException ex)
-                {
-                    Helpers.Print($"An error occurred: {ex.Message} \n", ConsoleColor.Red);
-                }
-            }
+                FileHandler.WriteToFile(new int[] { this.turn }, Array.Empty<string>());
         }
 
         private int DecideTurn()
@@ -216,21 +233,7 @@ namespace Last_One_Loses
                 int playerMatchSticks = player.GetMatchSticks(matchSticks);
 
                 Helpers.Print($"{player.Name} played {playerMatchSticks}\n");
-                try
-                {
-                    string filePath = "runninggame.dat";
-                    using FileStream fileStream = new(filePath, FileMode.Append, FileAccess.Write);
-                    using BinaryWriter writer = new(fileStream);
-
-                    writer.Write(playerMatchSticks);
-
-                    fileStream.Close();
-                    writer.Close();
-                }
-                catch (IOException ex)
-                {
-                    Helpers.Print($"An error occurred: {ex.Message} \n", ConsoleColor.Red);
-                }
+                FileHandler.WriteToFile(new int[] { playerMatchSticks }, Array.Empty<string>());
                 PlayTurn(playerMatchSticks);
             }
         }
@@ -330,29 +333,9 @@ namespace Last_One_Loses
 
         static void Play(Player[] players)
         {
-            string filePath = "runninggame.dat";
-
-            try
-            {
-                using FileStream fileStream = new(filePath, FileMode.Create, FileAccess.Write);
-                using BinaryWriter writer = new(fileStream);
-
-                writer.Write(players.Length);
-                writer.Write(playBestOutOf);
-                writer.Write(startingMatchSticks);
-                writer.Write(players[0] is AIPlayer ? aiDifficulty : -1);
-
-                foreach (Player player in players)
-                    writer.Write(player.Name);
-
-                fileStream.Close();
-                writer.Close();
-            }
-            catch (IOException ex)
-            {
-                Helpers.Print($"An error occurred: {ex.Message}\n", ConsoleColor.Red);
-            }
-
+            FileHandler.WriteToFile(
+                new int[] { players.Length, playBestOutOf, startingMatchSticks, players[0] is AIPlayer ? aiDifficulty : -1 }, players.Select((p) => p.Name).ToArray()
+            );
 
             Dictionary<Player, int> playerLosses = new();
             foreach (Player player in players)
@@ -409,11 +392,15 @@ namespace Last_One_Loses
 
         static Dictionary<string, Action> HomeMenu()
         {
-            return new Dictionary<string, Action> {
-                { "Load game", LoadGame },
-                { "New game", () => ShowMenu(NewGameMenu()) },
-                { "Options", OptionsPage }
-            };
+            Dictionary<string, Action> HM = new();
+
+            if (FileHandler.FileExists())
+                HM.Add("Load game", LoadGame);
+
+            HM.Add("New game", () => ShowMenu(NewGameMenu()));
+            HM.Add("Options", OptionsPage);
+
+            return HM;
         }
         static Dictionary<string, Action> NewGameMenu()
         {
