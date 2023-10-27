@@ -124,6 +124,11 @@ namespace Last_One_Loses
         {
             return File.Exists(fileName);
         }
+
+        static public void DeleteFile()
+        {
+            File.Delete(fileName);
+        }
     }
 
     class Helpers
@@ -320,6 +325,7 @@ namespace Last_One_Loses
                     foreach (var p in Leaderboard)
                         Helpers.Print($"{p.Key.Name} lost {p.Value} times\n", ConsoleColor.Gray);
                 }
+                FileHandler.DeleteFile();
             }
             catch (FileNotFoundException)
             {
@@ -358,6 +364,7 @@ namespace Last_One_Loses
                 foreach (var p in Leaderboard)
                     Helpers.Print($"{p.Key.Name} lost {p.Value} times\n", ConsoleColor.Gray);
             }
+            FileHandler.DeleteFile();
         }
 
         static Player ChooseAI(int aiDifficulty)
