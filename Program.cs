@@ -113,11 +113,11 @@ namespace Last_One_Loses
         }
         static public string StringPrompt(Action PromptMessage)
         {
-            string? result;
+            string? result = "";
             do
             {
                 PromptMessage();
-            } while ((result = Console.ReadLine()) != "");
+            } while ((result = Console.ReadLine()) == "");
 
             return result;
         }
@@ -223,7 +223,6 @@ namespace Last_One_Loses
                     using BinaryWriter writer = new(fileStream);
 
                     writer.Write(playerMatchSticks);
-                    Console.WriteLine(playerMatchSticks);
 
                     fileStream.Close();
                     writer.Close();
@@ -266,10 +265,7 @@ namespace Last_One_Loses
 
                     if (aiDifficulty != -1 && i == 0)
                         players[i] = ChooseAI(aiDifficulty);
-
-                    Helpers.Print($"Name {i} {players[i].Name}\n", ConsoleColor.Magenta);
                 }
-
 
                 Dictionary<Player, int> playerLosses = new();
                 foreach (Player player in players)
@@ -415,10 +411,17 @@ namespace Last_One_Loses
         {
             return new Dictionary<string, Action> {
                 { "Load game", LoadGame },
+                { "New game", () => ShowMenu(NewGameMenu()) },
+                { "Options", OptionsPage }
+            };
+        }
+        static Dictionary<string, Action> NewGameMenu()
+        {
+            return new Dictionary<string, Action> {
+                { "Main menu", () => ShowMenu(HomeMenu()) },
                 { "Single player", SinglePlayerGame },
                 { "Two player", TwoPlayerGame },
-                { "Three player", ThreePlayerGame },
-                { "Options", OptionsPage }
+                { "Three player", ThreePlayerGame }
             };
         }
 
