@@ -25,7 +25,6 @@ namespace Last_One_Loses
         public string Name { get; set; }
         public virtual int GetMatchSticks(int remainingMatchSticks)
         {
-            // Standard code
             return 0;
         }
 
@@ -44,7 +43,7 @@ namespace Last_One_Loses
             int playerMatchSticks;
             do
             {
-                playerMatchSticks = Helpers.IntPrompt(() => Helpers.Print(string.Format("{0}'s turn (1, 2, or 3): ", base.Name)));
+                playerMatchSticks = Helpers.IntPrompt(() => Helpers.Print($"{Name}'s turn (1, 2, or 3): "));
             } while (playerMatchSticks <= 0 || playerMatchSticks > 3 || playerMatchSticks > remainingMatchSticks);
 
             return playerMatchSticks;
@@ -114,11 +113,11 @@ namespace Last_One_Loses
         }
         static public string StringPrompt(Action PromptMessage)
         {
-            string result;
+            string? result;
             do
             {
                 PromptMessage();
-            } while ((result = Console.ReadLine()) == "");
+            } while ((result = Console.ReadLine()) != "");
 
             return result;
         }
@@ -128,7 +127,7 @@ namespace Last_One_Loses
     {
         int turn;
         int matchSticks;
-        private Player[] players;
+        private readonly Player[] players;
 
         public Game(int turn, int matchSticks, Player[] players, bool writeToFile = true)
         {
@@ -144,42 +143,35 @@ namespace Last_One_Loses
                 try
                 {
                     string filePath = "runninggame.dat";
-                    using FileStream fileStream = new FileStream(filePath, FileMode.Append, FileAccess.Write);
-                    using BinaryWriter writer = new BinaryWriter(fileStream);
-
-                    Helpers.Print($"turn {this.turn}\n", ConsoleColor.Magenta);
+                    using FileStream fileStream = new(filePath, FileMode.Append, FileAccess.Write);
+                    using BinaryWriter writer = new(fileStream);
 
                     writer.Write(this.turn);
 
                     fileStream.Close();
                     writer.Close();
-
-                    Console.WriteLine("Data written to binary file. 1");
                 }
                 catch (IOException ex)
                 {
-                    Console.WriteLine("An error occurred 4: " + ex.Message);
+                    Helpers.Print($"An error occurred: {ex.Message} \n", ConsoleColor.Red);
                 }
             }
         }
 
         private int DecideTurn()
         {
-            Random random = new Random();
+            Random random = new();
 
             if (players.Length == 3)
-            {
                 return random.Next(0, 3);
-            }
 
             string coinChoice;
             do
-            {
-                coinChoice = Helpers.StringPrompt(() => Helpers.Print(string.Format("{0}, choose 'heads' or 'tails'? ", players[1].Name)));
-            } while (coinChoice != "heads" && coinChoice != "tails");
+                coinChoice = Helpers.StringPrompt(() => Helpers.Print($"{players[1].Name}, choose 'heads' or 'tails': "));
+            while (coinChoice != "heads" && coinChoice != "tails");
 
             int coinOutcome = random.Next(0, 2);
-            Helpers.Print(string.Format("The coin flipped {0}\n", coinOutcome == 0 ? "heads" : "tails"), ConsoleColor.Blue);
+            Helpers.Print(coinOutcome == 0 ? "The coin flipped heads\n" : "The coin flipped tails\n", ConsoleColor.Blue);
 
             if ((coinOutcome == 0 && coinChoice == "heads") || (coinOutcome == 1 && coinChoice == "tails")) // guessed correctly
                 return 1;
@@ -187,7 +179,7 @@ namespace Last_One_Loses
             return 0;
         }
 
-        private void PrintMatchsticks(int nOfMatchSticks)
+        private static void PrintMatchsticks(int nOfMatchSticks)
         {
             for (int rows = 0; rows < 4; rows++)
             {
@@ -202,45 +194,43 @@ namespace Last_One_Loses
 
         public void PlayTurn(int playerMatchSticks)
         {
-            this.matchSticks -= playerMatchSticks;
-            this.turn++;
+            matchSticks -= playerMatchSticks;
+            turn++;
         }
 
         public Player Play()
         {
             while (true)
             {
-                Player player = this.players[this.turn % this.players.Length];
+                Player player = players[turn % players.Length];
 
-                if (this.matchSticks == 0)
+                if (matchSticks == 0)
                 {
-                    Helpers.Print(string.Format("{0} Lost!\n", players[(this.turn - 1) % this.players.Length].Name), ConsoleColor.Red);
-                    return players[(this.turn - 1) % this.players.Length];
+                    Helpers.Print($"{players[(turn - 1) % players.Length].Name} Lost!\n", ConsoleColor.Red);
+                    return players[(turn - 1) % players.Length];
                 }
 
-                Helpers.Print(string.Format("There are {0} matches remaining\n", this.matchSticks), ConsoleColor.Green);
-                PrintMatchsticks(this.matchSticks);
+                Helpers.Print($"There are {matchSticks} matches remaining\n", ConsoleColor.Green);
+                PrintMatchsticks(matchSticks);
 
-                int playerMatchSticks = player.GetMatchSticks(this.matchSticks);
+                int playerMatchSticks = player.GetMatchSticks(matchSticks);
 
-                Helpers.Print(string.Format("{0} played {1}\n", player.Name, playerMatchSticks));
+                Helpers.Print($"{player.Name} played {playerMatchSticks}\n");
                 try
                 {
                     string filePath = "runninggame.dat";
-                    using FileStream fileStream = new FileStream(filePath, FileMode.Append, FileAccess.Write);
-                    using BinaryWriter writer = new BinaryWriter(fileStream);
+                    using FileStream fileStream = new(filePath, FileMode.Append, FileAccess.Write);
+                    using BinaryWriter writer = new(fileStream);
 
                     writer.Write(playerMatchSticks);
                     Console.WriteLine(playerMatchSticks);
 
                     fileStream.Close();
                     writer.Close();
-
-                    Console.WriteLine("Data written to binary file. 2");
                 }
                 catch (IOException ex)
                 {
-                    Console.WriteLine("An error occurred 1: " + ex.Message);
+                    Helpers.Print($"An error occurred: {ex.Message} \n", ConsoleColor.Red);
                 }
                 PlayTurn(playerMatchSticks);
             }
@@ -259,21 +249,15 @@ namespace Last_One_Loses
 
             try
             {
-                using FileStream fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
-                using BinaryReader reader = new BinaryReader(fileStream);
+                using FileStream fileStream = new(filePath, FileMode.Open, FileAccess.Read);
+                using BinaryReader reader = new(fileStream);
 
                 int nOfPlayers = reader.ReadInt32();
                 playBestOutOf = reader.ReadInt32();
                 startingMatchSticks = reader.ReadInt32();
                 aiDifficulty = reader.ReadInt32();
 
-                Helpers.Print($"nOfPlayers {nOfPlayers}\n", ConsoleColor.Magenta);
-                Helpers.Print($"playBestOutOf {playBestOutOf}\n", ConsoleColor.Magenta);
-                Helpers.Print($"startingMatchSticks {startingMatchSticks}\n", ConsoleColor.Magenta);
-                Helpers.Print($"aiDifficulty {aiDifficulty}\n", ConsoleColor.Magenta);
-
-
-                Game game;
+                Helpers.Print($"Loaded {nOfPlayers} player game. Play best out of {playBestOutOf}. Starting Matchsticks: {startingMatchSticks} \n", ConsoleColor.Magenta);
                 Player[] players = new Player[nOfPlayers];
 
                 for (int i = 0; i < nOfPlayers; i++)
@@ -287,11 +271,9 @@ namespace Last_One_Loses
                 }
 
 
-                Dictionary<Player, int> playerLosses = new Dictionary<Player, int>();
+                Dictionary<Player, int> playerLosses = new();
                 foreach (Player player in players)
-                {
                     playerLosses[player] = 0;
-                }
 
 
                 int playedMatchsticksSum = 0, turn = -1, nOfSavedGames = 0;
@@ -320,12 +302,7 @@ namespace Last_One_Loses
                 }
                 reader.Close();
 
-                foreach (var p in playerLosses)
-                {
-                    Helpers.Print($"{p.Key.Name} lost {p.Value} times\n", ConsoleColor.Gray);
-                }
-
-                game = new Game(turn, startingMatchSticks - playedMatchsticksSum, players, false);
+                Game game = new(turn, startingMatchSticks - playedMatchsticksSum, players, false);
                 playerLosses[game.Play()]++;
 
                 for (int i = 0; i < playBestOutOf - nOfSavedGames - 1; i++)
@@ -342,18 +319,16 @@ namespace Last_One_Loses
                     Helpers.Print($"{Leaderboard.First().Key.Name} won!\n", ConsoleColor.Magenta);
                     Helpers.Print("Details: \n", ConsoleColor.Gray);
                     foreach (var p in Leaderboard)
-                    {
                         Helpers.Print($"{p.Key.Name} lost {p.Value} times\n", ConsoleColor.Gray);
-                    }
                 }
             }
             catch (FileNotFoundException)
             {
-                Console.WriteLine("File not found.");
+                Helpers.Print($"File not found. \n", ConsoleColor.Red);
             }
             catch (IOException ex)
             {
-                Console.WriteLine("An error occurred 2: " + ex.Message);
+                Helpers.Print($"An error occurred: {ex.Message} \n", ConsoleColor.Red);
             }
         }
 
@@ -363,40 +338,33 @@ namespace Last_One_Loses
 
             try
             {
-                using FileStream fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write);
-                using BinaryWriter writer = new BinaryWriter(fileStream);
+                using FileStream fileStream = new(filePath, FileMode.Create, FileAccess.Write);
+                using BinaryWriter writer = new(fileStream);
 
                 writer.Write(players.Length);
                 writer.Write(playBestOutOf);
                 writer.Write(startingMatchSticks);
-                Console.WriteLine((players[0] is AIPlayer) ? aiDifficulty : -1);
                 writer.Write(players[0] is AIPlayer ? aiDifficulty : -1);
 
                 foreach (Player player in players)
-                {
                     writer.Write(player.Name);
-                }
 
                 fileStream.Close();
                 writer.Close();
-
-                Console.WriteLine("Data written to binary file. 3");
             }
             catch (IOException ex)
             {
-                Console.WriteLine("An error occurred 3: " + ex.Message);
+                Helpers.Print($"An error occurred: {ex.Message}\n", ConsoleColor.Red);
             }
 
 
-            Dictionary<Player, int> playerLosses = new Dictionary<Player, int>();
+            Dictionary<Player, int> playerLosses = new();
             foreach (Player player in players)
-            {
                 playerLosses[player] = 0;
-            }
 
             for (int i = 0; i < playBestOutOf; i++)
             {
-                Game game = new Game(-1,
+                Game game = new(-1,
                     startingMatchSticks, players
                 );
                 playerLosses[game.Play()]++;
@@ -409,9 +377,7 @@ namespace Last_One_Loses
                 Helpers.Print($"{Leaderboard.First().Key.Name} won!\n", ConsoleColor.Magenta);
                 Helpers.Print("Details: \n", ConsoleColor.Gray);
                 foreach (var p in Leaderboard)
-                {
                     Helpers.Print($"{p.Key.Name} lost {p.Value} times\n", ConsoleColor.Gray);
-                }
             }
         }
 
@@ -441,74 +407,64 @@ namespace Last_One_Loses
         {
             startingMatchSticks = Helpers.IntPrompt(() => Helpers.Print("Enter the starting matchsticks: "));
             playBestOutOf = Helpers.IntPrompt(() => Helpers.Print("Play best out of: "));
-            aiDifficulty = Helpers.IntPrompt(() => Helpers.Print("AI Difficulty: (0: chaotic, 1: easy, 2: hard)"));
-            ShowMenu();
+            aiDifficulty = Helpers.IntPrompt(() => Helpers.Print("AI Difficulty (0: chaotic, 1: easy, 2: hard): "));
+            ShowMenu(HomeMenu());
         }
 
-        static void ShowMenu()
+        static Dictionary<string, Action> HomeMenu()
         {
-            var menu = new Dictionary<string, Action> {
+            return new Dictionary<string, Action> {
                 { "Load game", LoadGame },
                 { "Single player", SinglePlayerGame },
                 { "Two player", TwoPlayerGame },
                 { "Three player", ThreePlayerGame },
                 { "Options", OptionsPage }
             };
+        }
 
+        static void ShowMenu(Dictionary<string, Action> menuOptions)
+        {
             int chosenMenuOption = 0;
             string menuOptionChoiceInput = "";
 
             while (menuOptionChoiceInput != "Enter")
             {
                 Console.Clear();
-                for (int i = 0; i < menu.Count; i++)
-                {
+                for (int i = 0; i < menuOptions.Count; i++)
                     if (i == chosenMenuOption)
-                    {
-                        Helpers.Print(menu.ElementAt(i).Key + "\n", ConsoleColor.Blue);
-                    }
+                        Helpers.Print($"{menuOptions.ElementAt(i).Key}\n", ConsoleColor.Blue);
                     else
-                    {
-                        Helpers.Print(menu.ElementAt(i).Key + "\n");
-                    }
-                }
+                        Helpers.Print($"{menuOptions.ElementAt(i).Key}\n");
+
 
                 menuOptionChoiceInput = Console.ReadKey().Key.ToString();
                 switch (menuOptionChoiceInput)
                 {
                     case "DownArrow":
-                        if (chosenMenuOption + 1 < menu.Count)
-                        {
+                        if (chosenMenuOption + 1 < menuOptions.Count)
                             // Go to next option
                             chosenMenuOption++;
-                        }
                         else
-                        {
                             // If at the end, go back to the first option
                             chosenMenuOption = 0;
-                        }
                         break;
                     case "UpArrow":
                         if (chosenMenuOption - 1 >= 0)
-                        {
                             // Go to previous option
                             chosenMenuOption--;
-                        }
                         else
-                        {
                             // If at the start, go to the last option
-                            chosenMenuOption = menu.Count - 1;
-                        }
+                            chosenMenuOption = menuOptions.Count - 1;
                         break;
                     default:
                         break;
                 }
             }
-            menu.ElementAt(chosenMenuOption).Value();
+            menuOptions.ElementAt(chosenMenuOption).Value();
         }
         static void Main(string[] args)
         {
-            ShowMenu();
+            ShowMenu(HomeMenu());
             Console.ReadKey();
         }
     }
