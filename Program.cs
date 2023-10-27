@@ -2,6 +2,22 @@
 using System.Collections.Generic;
 using System.Linq;
 
+/** BINARY FILE SAVING GAME DATA
+
+number of players (including ai if it exists)
+playBestOutOf
+nOfMatchsticks
+ai difficulty: -1 no ai, 0 chaotic,  1 easy ai, 2 hard ai
+player name * n (including ai if it exists)
+first player turn
+matchsticks
+matchsticks
+...
+first player turn (for second game)
+matchsticks
+matchsticks
+...
+*/
 namespace Last_One_Loses
 {
     public class Player
